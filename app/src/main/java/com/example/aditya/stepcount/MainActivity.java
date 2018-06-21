@@ -40,8 +40,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     LineChart mChart;
     Boolean plotData=true;
     float prev_acc=150f;
+    float valley;
     float prev_acc1=150f;
     boolean firstpeak=true;
+    float sjs=1.5f;
+    float sja=1.5f;
+    float jerk=0f;
+    int count=0;
     boolean firstvalley=true;
     private SensorManager sensorManager;
     private final static String TAG = "StepDetector";
@@ -57,15 +62,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     float datapoints[]=new float[3];
     float smooth_sma[]=new float[3];
     int flag=0,flag_sma=0;
-    float peak_value,valley_value;
+    float peak_value,valley_value=9;
     double acc,lpfilter;
+    TextView tv;
+
     float[] gravityValues = new float[3],smooth_acc=new float[3];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        tv=(TextView)findViewById(R.id.textView3);
         mreset=(Button)findViewById(R.id.button);
         step=(TextView)findViewById(R.id.textView);
 
@@ -107,13 +114,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         l.setForm(Legend.LegendForm.LINE);
         l.setTextColor(Color.WHITE);
 
-
         XAxis xl=mChart.getXAxis();
         xl.setTextColor(Color.BLACK);
         xl.setDrawGridLines(true);
         xl.setAvoidFirstLastClipping(true);
         xl.setEnabled(true);
-
 
         YAxis leftAxis =mChart.getAxisLeft();
         leftAxis.setTextColor(Color.BLACK);
@@ -129,9 +134,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mChart.getXAxis().setDrawGridLines(true);
         mChart.setDrawBorders(true);
         startPlot();
-//
-//  v = (Vibrator)this.getSystemService(Context.VIBRATOR_SERVICE);
-    }
+ }
 
 
 
@@ -142,7 +145,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         set.setLineWidth(1.5f);
         set.setColor(Color.MAGENTA);
         set.setDrawValues(false);
-        set.setDrawCircles(false);
+        set.setDrawCircles(true);
         set.setHighlightEnabled(false);
         set.setCubicIntensity(0.2f);
         set.setMode(LineDataSet.Mode.CUBIC_BEZIER);
@@ -172,28 +175,43 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         thread.start();
     }
 
-    private boolean  detectPeak(float prev_acc,float prev_acc1,double acc)
+    private boolean detectPeak(float prev_acc,float prev_acc1,double acc,SensorEvent event)
     {
-        if (prev_acc1>prev_acc&&prev_acc1>acc){
+        if (prev_acc1>prev_acc&&prev_acc1>acc&&prev_acc>10.8){
+
             if(firstpeak){
                 peak_value=prev_acc1;
+                tv.setText(""+(event.timestamp)*(1.0/1000000));
                 firstpeak=false;
             }
 
+            jerk=Math.abs(prev_acc1-valley);
+
+            valley=detectValley(prev_acc,prev_acc1,acc,event);
             Log.i("Normal Peak Detected","YES");
-            if(prev_acc>10.5)
-            {
-                Log.i("INFO","Valid Peak Detected");
-                peak_value=prev_acc1;
-                return true;
-            }
+
+
+               if(jerk>1.5&&Math.abs(peak_value-prev_acc1)<1.0f){
+
+
+                    Log.i("INFO","Valid Peak Detected");
+                    peak_value=prev_acc1;
+                    return true;
+                }
+
+
         }
         return false;
 
     }
-    private boolean  detectValley(float prev_acc,float prev_acc1,double acc)
+    private float detectValley(float prev_acc,float prev_acc1,double acc,SensorEvent event)
     {
-        return false;
+        if(prev_acc1<prev_acc&&prev_acc1<acc&&prev_acc1<9&&prev_acc1>7.8){
+            valley_value=prev_acc1;
+            mreset.setText(""+Integer.toString((int)event.timestamp));
+        }
+
+        return valley_value;
 
     }
     private void addEntry(SensorEvent event){
@@ -238,12 +256,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     set=createset();
                     data.addDataSet(set);
                 }
-                if(detectPeak(prev_acc,prev_acc1,acc))
+                if(detectPeak(prev_acc,prev_acc1,acc,event))
                 {
                         step_count++;
 
                         step.setText(Integer.toString(step_count ));
                         vibrator.vibrate(250);
+
 
                 }
                 prev_acc=prev_acc1;
