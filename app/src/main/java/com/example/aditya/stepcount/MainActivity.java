@@ -53,7 +53,6 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     boolean addEntry=true;
-    Button mreset;
     TextView step;
     LineChart mChart;
     Boolean plotData = true;
@@ -83,7 +82,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     int flag = 0, flag_sma = 0;
     float peak_value, valley_value = 9;
     double acc, lpfilter;
-    TextView tv;
     Button mstop;
     DTW dtwObject = new DTW();
     float[] gravityValues = new float[3], smooth_acc = new float[3];
@@ -91,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     File file;
 
     public void createFile() {
-        File dir = new File(sdCard.getAbsolutePath() + "/");
+        File dir = new File(sdCard.getAbsolutePath() + "/sean");
         if (!dir.exists()) {
             dir.mkdir();
         }
@@ -121,20 +119,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);        //set layout
 
 
-        tv = (TextView) findViewById(R.id.textView3);     //binding all
         mstop = (Button) findViewById(R.id.button2);
-        mreset = (Button) findViewById(R.id.button);
         step = (TextView) findViewById(R.id.textView);
         step.setText("0");
         createFile();
-        mreset.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View VIEW) {           //reset button
-                step_count = 0;
-                step.setText(Integer.toString(step_count));
-
-            }
-        });
 
         mstop.setOnClickListener(new View.OnClickListener() {
 
@@ -144,12 +132,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View view) {
                 if (addEntry){
                     addEntry=false;
-                    mstop.setText("start recording");
-
+                    mstop.setText("starT Recording");
                 }else {
                     addEntry=true;
                     mstop.setText("stop recording");
-
                     return;
                 }
 
@@ -157,16 +143,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 try {
                     Log.i("Entered TRY", "Reading File");
                     Reader reader = Files.newBufferedReader(Paths.get(sdCard.getAbsolutePath() + "/sean/output.csv"));
+                    Reader reader1=Files.newBufferedReader(Paths.get(sdCard.getAbsolutePath()+"/SampleUp.csv"));
+                    CSVReader csvReader1=new CSVReader(reader1);
                     CSVReader csvReader = new CSVReader(reader);
-                    String[] input;
+                    String[] input1;
+                    String[] input2;
                     List<Float> input_list=new ArrayList<>();
+                    List<Float> template=new ArrayList<>();
                     Float[] inputDTW;
-                    while ((input = csvReader.readNext()) != null) {
-                        input_list.add(Float.valueOf(input[0]));
-                        Log.e("DATA",input[0]);
+                    Float[] templateDTW;
+
+
+                    while ((input1 = csvReader.readNext()) != null) {
+                        input_list.add(Float.valueOf(input1[0]));
+                        Log.e("REAL TIME DATA",input1[0]);
                     }
                     inputDTW=input_list.toArray(new Float[input_list.size()]);
+
+                    while ((input2 = csvReader1.readNext()) != null) {
+                        template.add(Float.valueOf(input2[0]));
+                        Log.e("FROM SAMPLE DATA",input2[0]);
+                    }
+                    templateDTW=template.toArray(new Float[template.size()]);
+
                     double distance = 0;
+                    int len_template=inputDTW.length;
                     if (inputDTW != null) {
                         distance = dtwObject.compute(inputDTW, inputDTW).getDistance();
                     }
@@ -268,7 +269,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             if (firstpeak) {
                 peak_value = prev_acc1;
-                tv.setText("" + (event.timestamp) * (1.0 / 1000000));
+              //  tv.setText("" + (event.timestamp) * (1.0 / 1000000));
                 firstpeak = false;
             }
 
@@ -297,7 +298,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float detectValley(float prev_acc, float prev_acc1, double acc, SensorEvent event) {
         if (prev_acc1 < prev_acc && prev_acc1 < acc && prev_acc1 < 9 && prev_acc1 > 7.8) {
             valley_value = prev_acc1;
-            mreset.setText("" + Integer.toString((int) event.timestamp));
         }
 
         return valley_value;
