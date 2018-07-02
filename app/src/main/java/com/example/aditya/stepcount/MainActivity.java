@@ -181,11 +181,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     List<Integer> special_index=new ArrayList<>();
                     while(!(end>inputDTW.length-1)){
 
-
+                    Log.e("NEXT","While Looping - "+start);
                     if(forloop){
+                        Log.e("For loop",""+start+"to "+end);
                     for (int l=start;l<=end;l++){
 //                       Log.e("Finally",templateDTW[l]+"");
                         temporary.add(inputDTW[l]);
+//                        Log.e("For loop",""+l);
+
 
                     }
                     }
@@ -193,7 +196,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         final_inputDTW = temporary.toArray(new Float[temporary.size()]);
 
                         result_distance = (float) dtwObject.compute(final_inputDTW, templateDTW).getDistance();
-                        if (result_distance < 0.0003) {
+                        Log.e("Result ",""+result_distance);
+                        if (result_distance < 0.03) {
                             Log.e("Threshold cleared", "Maybe Match");
                             if (first) {
                                 result_distance1 = result_distance;
@@ -207,7 +211,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 result_distance3 = result_distance3;
                                 third = false;
                             } else {
-                                result_distance2 = result_distance1;
+                                result_distance1 = result_distance2;
                                 result_distance2 = result_distance3;
                                 result_distance3 = result_distance;
 
@@ -232,6 +236,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                             }
 
+                        }
+                        else{
+                            start++;
+                            end++;
                         }
                     }
 
