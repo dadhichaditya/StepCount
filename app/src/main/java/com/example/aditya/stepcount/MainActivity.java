@@ -71,7 +71,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     Float[] fin = new Float[10000];
     Thread thread;
     Vibrator vibrator;
+    Boolean forloop=true;
     float result_distance;
+    float result_distance1;
+    float result_distance2;
+    float result_distance3;
     private float mLastDirections[] = new float[3 * 2];
     private float mLastExtremes[][] = {new float[3 * 2], new float[3 * 2]};
     private float mLastDiff[] = new float[3 * 2];
@@ -87,6 +91,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     float[] gravityValues = new float[3], smooth_acc = new float[3];
     File sdCard = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
     File file;
+    boolean first=true;
+    boolean second=false;
+    boolean third=false;
 
     public void createFile() {
         File dir = new File(sdCard.getAbsolutePath() + "/sean");
@@ -150,8 +157,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     String[] input2;
                     List<Float> input_list=new ArrayList<>();
                     List<Float> template=new ArrayList<>();
+                    List<Float> temporary=new ArrayList<>();
                     Float[] inputDTW;
                     Float[] templateDTW;
+                    Float[] final_inputDTW;
 
 
                     while ((input1 = csvReader.readNext()) != null) {
@@ -160,18 +169,77 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }
                     inputDTW=input_list.toArray(new Float[input_list.size()]);
 
+
                     while ((input2 = csvReader1.readNext()) != null) {
                         template.add(Float.valueOf(input2[0]));
                         Log.e("FROM SAMPLE DATA",input2[0]);
                     }
                     templateDTW=template.toArray(new Float[template.size()]);
+                    int start;
+                    int end=templateDTW.length-1;
+                    start=0;
+                    List<Integer> special_index=new ArrayList<>();
+                    while(!(end>inputDTW.length-1)){
 
-                    double distance = 0;
-                    int len_template=inputDTW.length;
-                    if (inputDTW != null) {
-                        distance = dtwObject.compute(inputDTW, inputDTW).getDistance();
+
+                    if(forloop){
+                    for (int l=start;l<=end;l++){
+//                       Log.e("Finally",templateDTW[l]+"");
+                        temporary.add(inputDTW[l]);
+
                     }
-                    Toast.makeText(MainActivity.this, "D:" + distance, Toast.LENGTH_SHORT).show();
+                    }
+                    if(temporary!=null) {
+                        final_inputDTW = temporary.toArray(new Float[temporary.size()]);
+
+                        result_distance = (float) dtwObject.compute(final_inputDTW, templateDTW).getDistance();
+                        if (result_distance < 0.0003) {
+                            Log.e("Threshold cleared", "Maybe Match");
+                            if (first) {
+                                result_distance1 = result_distance;
+                                first = false;
+                                second = true;
+                            } else if (second) {
+                                result_distance2 = result_distance;
+                                second = false;
+                                third = true;
+                            } else if (third) {
+                                result_distance3 = result_distance3;
+                                third = false;
+                            } else {
+                                result_distance2 = result_distance1;
+                                result_distance2 = result_distance3;
+                                result_distance3 = result_distance;
+
+                            }
+                            if (result_distance2 < result_distance1 && result_distance2 < result_distance3) {
+                                Log.e("Match", "Confirmed Match at "+start);
+                                special_index.add(start);
+                                start = end;
+                                end = end + templateDTW.length;
+                                temporary.clear();
+                                forloop=true;
+
+
+
+                            }
+                            else{
+                                temporary.remove(0);
+                                start++;
+                                end++;
+                                temporary.add(inputDTW[end]);
+                                forloop=false;
+
+                            }
+
+                        }
+                    }
+
+
+
+                    }
+//                    int len_template=inputDTW.length;
+//                    Toast.makeText(MainActivity.this, "D:" , Toast.LENGTH_SHORT).show();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -364,6 +432,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     try {
                         csvWriter.writeNext(entry);
+
                         csvWriter.flush();
                         csvWriter.close();
                     } catch (IOException e) {
@@ -379,7 +448,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 data.addEntry(new Entry(set.getEntryCount(), (float) acc), 0);
                 data.notifyDataChanged();
                 mChart.notifyDataSetChanged();
-                mChart.setVisibleXRangeMaximum(250);
+                mChart.setVisibleXRangeMaximum(200);
                 mChart.moveViewToX(data.getEntryCount());
             }
         }
@@ -418,6 +487,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onStop() {
         super.onStop();
         sensorManager.unregisterListener((SensorEventListener) this);
+    }
+    public  void onResume(){
+        super.onResume();
+        sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_GAME);
+
     }
 
     public void onPause() {
